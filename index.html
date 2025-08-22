@@ -2,92 +2,100 @@
 <html lang="id">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Viewer eBook</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            background: #f0f0f0;
-            font-family: Arial, sans-serif;
-        }
+  <meta charset="UTF-8">
+  <title>Viewer eBook</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
 
-        #pdf-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
+    #pdf-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
-        @media print {
-            body {
-                display: none !important;
-            }
-        }
+    canvas {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      max-width: 100%; /* Biar tidak keluar dari layar */
+      height: auto !important;
+    }
 
-
-        canvas {
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            background-color: white;
-        }
-
-
-        
-    </style>
+    @media print {
+      body {
+        display: none !important;
+      }
+    }
+  </style>
 </head>
 
 <body oncontextmenu="return false">
 
-    <div id="pdf-container"></div>
+  <div id="pdf-container"></div>
 
+  <script>
+    const url = 'PMK 2118 Tahun 2023 - Standar Teknis Pemeriksaan Haji dan Istithoah.pdf';
 
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    <script>
-        const url = 'PMK 2118 Tahun 2023 - Standar Teknis Pemeriksaan Haji dan Istithoah.pdf'; 
+    const container = document.getElementById('pdf-container');
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    function renderPage(page, containerWidth) {
+      const viewport = page.getViewport({ scale: 1 }); // default dulu
+      const scale = containerWidth / viewport.width;   // hitung ulang biar pas dengan layar
+      const scaledViewport = page.getViewport({ scale });
 
-        const container = document.getElementById('pdf-container');
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = scaledViewport.height;
+      canvas.width = scaledViewport.width;
 
-        pdfjsLib.getDocument({
-            url: url,
-            disableStream: true,
-            disableAutoFetch: true
-        }).promise.then(function (pdf) {
-            const totalPages = pdf.numPages;
+      container.appendChild(canvas);
 
-            for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
-                pdf.getPage(pageNumber).then(function (page) {
-                    const scale = 1.5;
-                    const viewport = page.getViewport({ scale: scale });
+      page.render({
+        canvasContext: context,
+        viewport: scaledViewport
+      });
+    }
 
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
+    function loadPDF() {
+      container.innerHTML = ''; // clear canvas biar tidak dobel pas resize
+      pdfjsLib.getDocument(url).promise.then(pdf => {
+        const containerWidth = container.clientWidth; // ambil lebar container saat ini
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          pdf.getPage(pageNumber).then(page => {
+            renderPage(page, containerWidth);
+          });
+        }
+      }).catch(error => {
+        console.error('Gagal memuat PDF:', error);
+      });
+    }
 
-                    container.appendChild(canvas);
+    loadPDF();
 
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    page.render(renderContext);
-                });
-            }
-        }).catch(function (error) {
-            console.error('Gagal memuat PDF:', error);
-        });
+    // Tambahkan event resize agar PDF ikut menyesuaikan ukuran layar
+    window.addEventListener('resize', () => {
+      loadPDF();
+    });
 
-        document.addEventListener('keydown', function (e) {
-            if ((e.ctrlKey && ['s', 'p', 'u'].includes(e.key.toLowerCase())) || e.key === 'F12') {
-                e.preventDefault();
-                alert('Aksi ini tidak diizinkan.');
-            }
-        });
-    </script>
+    // Blokir shortcut tertentu
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey && ['s', 'p', 'u'].includes(e.key.toLowerCase())) || e.key === 'F12') {
+        e.preventDefault();
+        alert('Aksi ini tidak diizinkan.');
+      }
+    });
+  </script>
 </body>
 
 </html>
